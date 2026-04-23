@@ -1,0 +1,6 @@
+.env
+backend/venv
+postgres-data
+__pycache__/
+*.pyc
+.vscode/
