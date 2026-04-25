@@ -162,7 +162,7 @@ export const LoginScreen = () => {
               variant="outlined"
               sx={{ mt: 1, mb: 2, py: 1.5 }}
               color="secondary"
-              onClick={() => window.location.href = 'http://localhost:5020/api/auth/google/login'}
+              onClick={() => window.location.href = '/api/auth/google/login'}
             >
               Sign in with Google
             </Button>
