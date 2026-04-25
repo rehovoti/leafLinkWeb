@@ -1,10 +1,10 @@
-import { AppBar, IconButton, Toolbar, Typography, Drawer } from '@mui/material'
+import { AppBar, IconButton, Toolbar, Typography } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import { Person } from '@mui/icons-material'
 import { useSelector } from 'react-redux'
 import { type RootState } from '../store';
 
-function Header({onMenuClick}) {
+function Header({onMenuClick}: {onMenuClick: () => void}) {
   const title = useSelector((state: RootState) => state.device.activeDevice.title);
 
   return (

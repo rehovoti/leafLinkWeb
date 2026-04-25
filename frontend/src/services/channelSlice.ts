@@ -8,7 +8,7 @@ const channelSlice = createSlice({
   name: 'channel',
   initialState,
   reducers: {
-    resetChannels(state, action: PayloadAction<any>) {
+    resetChannels(state) {
       state.channels = {}
     },
     setChannels(state, action: PayloadAction<any>) {

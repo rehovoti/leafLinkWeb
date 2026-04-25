@@ -3,12 +3,7 @@ import {
   TextField,
   Stack,
   InputAdornment,
-  Typography,
 } from '@mui/material';
-import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
 import { type RootState } from '../store';
@@ -20,14 +15,6 @@ interface TurnOnNowProps {
 const TurnOnNow: React.FC<TurnOnNowProps> = ({ channelId }) => {
   const dispatch = useDispatch();
   const now = useSelector((state: RootState) => state.channel.channels[channelId]?.now);
-  const handleTimeChange = (value: dayjs.Dayjs | null) => {
-    if (value) {
-      dispatch(updateNow({
-        id: channelId,
-        duration: now.duration,
-      }));
-    }
-  };
   const handleDurationChange = (field: 'minutes' | 'seconds') => (event: React.ChangeEvent<HTMLInputElement>) => {
     const newDuration = {
       ...now.duration,

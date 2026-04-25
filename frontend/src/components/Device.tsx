@@ -10,11 +10,11 @@ import { setChannels, initChannel } from "../services/channelSlice"
 
 export const Device = () => {
   const activeDevice = useSelector((state: RootState)=> state.device.activeDevice)
-  const {data:channels=[], isLoading, isError:isDevErr, error} = 
+  const {data:channels=[]} = 
     useGetChannelsQuery({ deviceId:activeDevice.id });
   const dispatch = useDispatch()
 
-  const [channelKeys, setChannelKeys] = useState([])
+  const [channelKeys, setChannelKeys] = useState<string[]>([])
 
   const decodedState = useMemo(() => {
     if (!channels || channels.length === 0) {
@@ -29,7 +29,7 @@ export const Device = () => {
     // This will now only run when the source data from the API truly changes.
     if (decodedState.channels && Object.keys(decodedState.channels).length > 0) {
        dispatch(setChannels(decodedState.channels));
-       setChannelKeys(decodedState.channelKeys)
+       setChannelKeys(decodedState.channelKeys as string[])
     }
   }, [decodedState, dispatch]);
 

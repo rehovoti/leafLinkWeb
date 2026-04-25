@@ -35,7 +35,7 @@ export const LoginScreen = () => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage({ text: '', type: '' });
     setLoading(true);
@@ -102,7 +102,7 @@ export const LoginScreen = () => {
             {isLogin ? 'Login' : 'Sign Up'}
           </Typography>
           {message.text && (
-            <Alert severity={message.type} sx={{ width: '100%', mb: 2 }}>
+            <Alert severity={message.type as any} sx={{ width: '100%', mb: 2 }}>
               {message.text}
             </Alert>
           )}

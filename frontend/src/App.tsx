@@ -6,7 +6,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
   ListItemButton,
   Drawer } from '@mui/material';
   import { useDispatch } from 'react-redux';

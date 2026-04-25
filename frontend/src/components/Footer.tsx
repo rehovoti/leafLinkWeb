@@ -1,27 +1,13 @@
 import * as React from 'react';
 // import BottomNavigation from '@mui/material/BottomNavigation';
 // import BottomNavigationAction from '@mui/material/BottomNavigationAction';
-import { BottomNavigation, Paper, BottomNavigationAction, CssBaseline } from '@mui/material';
+import { BottomNavigation, Paper, BottomNavigationAction } from '@mui/material';
 // import CheckCircle from '@mui/icons-material/CheckCircle';
 import {CheckCircle} from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { type RootState } from '../store';
 import { useSaveChannelsMutation } from '../services/API';
 import { encodeData } from '../services/channelUtil';
-
-const stickyBottomStyles = {
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-};
-
-const actionStyles = {
-  color: 'primary.contrastText', 
-  '&.Mui-selected': {
-    color: 'primary.contrastText',
-  },
-};
 
 const Footer = () => {
   const [footerValue, setFooterValue] = React.useState(0);
@@ -31,7 +17,7 @@ const Footer = () => {
   ] = useSaveChannelsMutation();
   const activeDevice = useSelector((state: RootState) => state.device.activeDevice)
 
-  const handleSave = () => {
+  const handleSave = (_event?: any) => {
     const encodedChannels = encodeData({channels:channels})
     saveChannels(encodedChannels)
   };

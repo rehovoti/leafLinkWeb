@@ -1,8 +1,7 @@
-import { useDispatch, useSelector } from "react-redux"
-import { useEffect, useState } from "react";
-import { type RootState } from '../store';
+import { useDispatch } from "react-redux"
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { setDevices, setActiveDevice } from "../services/deviceSlice"
+import { setActiveDevice } from "../services/deviceSlice"
 import { resetChannels } from "../services/channelSlice";
 import { useAddDeviceMutation, useGetDevicesQuery } from '../services/API';
 import AddIcon from "@mui/icons-material/Add"
@@ -30,17 +29,7 @@ const fabStyle = {
   right: 30,
 };
 
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-};
+
 
 type FormFields = {
   title: string,
@@ -61,16 +50,16 @@ export const DeviceSelector = () => {
     }
   })
 
-  const [addDevice, { isCLoading, isSuccess, isError }] = useAddDeviceMutation();
-  const {data:devices=[], isLoading, isError:isDevErr, error} = useGetDevicesQuery();
+  const [addDevice] = useAddDeviceMutation();
+  const {data:devices=[]} = useGetDevicesQuery();
 
-  const onSubmit = (payload) => {
+  const onSubmit = (payload: any) => {
     console.log('submitted:'+ JSON.stringify(payload))
     addDevice(payload)
     setModalOpen(false)
   }
 
-  const onSelectDevice = device => {
+  const onSelectDevice = (device: any) => {
     dispatch(resetChannels(''))
     dispatch(setActiveDevice(device))
   }

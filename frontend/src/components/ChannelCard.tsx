@@ -74,9 +74,9 @@ const chantxt = `Channel: ${channel.channel_num}`
             color: (theme) => theme.palette.getContrastText(theme.palette.primary.main),
           },
         }}
-        onKeyUp={(e) => {
+        onKeyUp={(e: React.KeyboardEvent<HTMLDivElement>) => {
           if (e.key === 'Enter') {
-            handleTitleChange(e);
+            handleTitleChange(e as any);
           }
         }}
         fullWidth
