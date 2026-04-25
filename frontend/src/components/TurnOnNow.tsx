@@ -4,7 +4,6 @@ import {
   Stack,
   InputAdornment,
 } from '@mui/material';
-import dayjs from 'dayjs';
 import { useDispatch, useSelector } from 'react-redux';
 import { type RootState } from '../store';
 import { updateNow } from '../services/channelSlice';

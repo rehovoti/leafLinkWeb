@@ -31,7 +31,7 @@ const Footer = () => {
           <BottomNavigation
             showLabels
             value={footerValue}
-            onChange={(event, newValue) => {
+            onChange={(_, newValue) => {
               setFooterValue(newValue);
             }}
           >

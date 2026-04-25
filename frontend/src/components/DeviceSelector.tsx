@@ -51,7 +51,7 @@ export const DeviceSelector = () => {
   })
 
   const [addDevice] = useAddDeviceMutation();
-  const {data:devices=[]} = useGetDevicesQuery();
+  const {data:devices=[]} = useGetDevicesQuery(undefined);
 
   const onSubmit = (payload: any) => {
     console.log('submitted:'+ JSON.stringify(payload))
@@ -60,7 +60,7 @@ export const DeviceSelector = () => {
   }
 
   const onSelectDevice = (device: any) => {
-    dispatch(resetChannels(''))
+    dispatch(resetChannels())
     dispatch(setActiveDevice(device))
   }
 
@@ -68,7 +68,7 @@ export const DeviceSelector = () => {
     <>
     <Container sx={{paddingBlockStart:'1rem', width:'80vw', height:'80vh'}}>
     {
-      devices.map(dev => 
+      devices.map((dev: any) => 
         <Card sx={{ margin: 3, cursor: 'pointer'}} key={dev.id}
         onClick={()=>onSelectDevice(dev)}
         >
