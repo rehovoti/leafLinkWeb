@@ -1,17 +1,13 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
-RUN npm run build # Vite's build command
+RUN npm run build
 
-# Stage 2: Serve the built application with Nginx
+# Stage 2: Serve static build with nginx.
 FROM nginx:alpine
-# Copy the built application from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
-# Copy custom Nginx configuration (optional)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-# Expose the port Nginx listens on
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-# Command to start Nginx
 CMD ["nginx", "-g", "daemon off;"]

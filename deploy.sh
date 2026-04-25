@@ -1,117 +1,114 @@
 #!/bin/bash
 # Deploy script for Leaflink on DigitalOcean
-# Run this on your droplet after cloning the repository
 
-set -e  # Exit on error
+set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-# Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Functions
 print_header() {
     echo -e "\n${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
     echo -e "${BLUE}========================================${NC}\n"
 }
 
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}\n"
+print_success() { echo -e "${GREEN}✓ $1${NC}\n"; }
+print_error() { echo -e "${RED}✗ $1${NC}\n"; }
+print_warning() { echo -e "${YELLOW}⚠ $1${NC}\n"; }
+
+COMPOSE_CMD=()
+
+detect_compose() {
+    if docker compose version >/dev/null 2>&1; then
+        COMPOSE_CMD=(docker compose)
+    elif command -v docker-compose >/dev/null 2>&1; then
+        COMPOSE_CMD=(docker-compose)
+    else
+        print_error "Docker Compose is not installed."
+        exit 1
+    fi
 }
 
-print_error() {
-    echo -e "${RED}✗ $1${NC}\n"
+compose() {
+    "${COMPOSE_CMD[@]}" "$@"
 }
 
-print_warning() {
-    echo -e "${YELLOW}⚠ $1${NC}\n"
+wait_for_database() {
+    print_header "Waiting For Database"
+    for i in {1..60}; do
+        if compose exec -T db sh -lc 'pg_isready -U "$POSTGRES_USER"' >/dev/null 2>&1; then
+            print_success "Database is ready"
+            return 0
+        fi
+        echo -n "."
+        sleep 1
+    done
+    echo ""
+    print_error "Database failed to become ready in 60 seconds"
+    return 1
 }
 
-# Main deployment logic
 main() {
     print_header "Leaflink Deployment Script"
 
-    # Check if running on Linux
     if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-        print_error "This script is designed for Linux. You're on: $OSTYPE"
+        print_error "This script is designed for Linux. Current: $OSTYPE"
         exit 1
     fi
 
-    # Check if Docker is installed
-    if ! command -v docker &> /dev/null; then
-        print_error "Docker is not installed. Please install Docker first."
+    if ! command -v docker >/dev/null 2>&1; then
+        print_error "Docker is not installed."
         exit 1
     fi
     print_success "Docker is installed"
 
-    # Check if Docker Compose is installed
-    if ! command -v docker-compose &> /dev/null; then
-        print_error "Docker Compose is not installed. Please install Docker Compose first."
-        exit 1
-    fi
-    print_success "Docker Compose is installed"
+    detect_compose
+    print_success "Using compose command: ${COMPOSE_CMD[*]}"
 
-    # Check if .env file exists
     if [ ! -f ".env" ]; then
-        print_error ".env file not found!"
-        echo -e "Please create .env file first. Use .env.example as template:\n"
-        echo "  cp .env.example .env"
-        echo "  nano .env  # Edit with your values"
+        print_error ".env file not found"
+        echo "Create it first using .env.example"
         exit 1
     fi
     print_success ".env file found"
 
-    # Check if required directories exist
     if [ ! -d "backend" ] || [ ! -d "frontend" ] || [ ! -d "nginx" ]; then
-        print_error "Required directories not found. Are you in the leaflink root directory?"
+        print_error "Required directories not found. Run this from repository root."
         exit 1
     fi
     print_success "Project structure verified"
 
-    # Menu
     echo "What would you like to do?"
-    echo "1) Full deployment (build + start + init DB)"
-    echo "2) Start services only"
-    echo "3) Stop services"
-    echo "4) Restart services"
+    echo "1) Full deployment (build + db init + start app)"
+    echo "2) Start app services (backend/frontend/nginx)"
+    echo "3) Stop all services"
+    echo "4) Restart app services"
     echo "5) View logs"
     echo "6) Check service status"
     echo "7) Initialize database"
     echo "8) Backup database"
+    echo "9) Start pgAdmin (tools profile)"
+    echo "10) Stop pgAdmin"
     echo ""
-    read -p "Enter choice [1-8]: " choice
+    read -r -p "Enter choice [1-10]: " choice
 
-    case $choice in
-        1)
-            deploy_full
-            ;;
-        2)
-            deploy_start
-            ;;
-        3)
-            deploy_stop
-            ;;
-        4)
-            deploy_restart
-            ;;
-        5)
-            deploy_logs
-            ;;
-        6)
-            deploy_status
-            ;;
-        7)
-            init_database
-            ;;
-        8)
-            backup_database
-            ;;
+    case "$choice" in
+        1) deploy_full ;;
+        2) deploy_start ;;
+        3) deploy_stop ;;
+        4) deploy_restart ;;
+        5) deploy_logs ;;
+        6) deploy_status ;;
+        7) init_database ;;
+        8) backup_database ;;
+        9) start_pgadmin ;;
+        10) stop_pgadmin ;;
         *)
             print_error "Invalid choice"
             exit 1
@@ -122,149 +119,118 @@ main() {
 deploy_full() {
     print_header "Full Deployment"
 
-    print_header "Step 1: Building Docker images"
-    docker-compose build
+    print_header "Step 1: Build Images"
+    compose build
     print_success "Images built"
 
-    print_header "Step 2: Starting services"
-    docker-compose up -d
-    print_success "Services started"
+    print_header "Step 2: Start Database"
+    compose up -d db
+    wait_for_database
 
-    print_header "Step 3: Waiting for database to be ready"
-    sleep 5
-    for i in {1..30}; do
-        if docker-compose exec -T db pg_isready -U $(grep DB_USER .env | cut -d= -f2) > /dev/null 2>&1; then
-            print_success "Database is ready"
-            break
-        fi
-        echo -n "."
-        sleep 1
-        if [ $i -eq 30 ]; then
-            print_error "Database failed to start within 30 seconds"
-            exit 1
-        fi
-    done
-
-    print_header "Step 4: Initializing database"
+    print_header "Step 3: Initialize Database"
     init_database
 
-    print_header "Step 5: Checking service health"
+    print_header "Step 4: Start App Services"
+    compose up -d backend frontend nginx
+    print_success "App services started"
+
     deploy_status
 
-    echo -e "\n${GREEN}========================================${NC}"
-    echo -e "${GREEN}Deployment Complete!${NC}"
-    echo -e "${GREEN}========================================${NC}\n"
-    echo "Access your application at:"
-    echo -e "  ${BLUE}https://leaflink.garden${NC}\n"
-    echo "To view logs:"
-    echo -e "  ${BLUE}docker-compose logs -f${NC}\n"
+    echo -e "${GREEN}Deployment complete.${NC}"
+    echo "Access your application at: https://leaflink.garden"
 }
 
 deploy_start() {
-    print_header "Starting Services"
-    docker-compose up -d
-    print_success "Services started"
-    sleep 2
+    print_header "Starting App Services"
+    compose up -d backend frontend nginx
+    print_success "App services started"
     deploy_status
 }
 
 deploy_stop() {
-    print_header "Stopping Services"
-    docker-compose down
+    print_header "Stopping All Services"
+    compose down
     print_success "Services stopped"
 }
 
 deploy_restart() {
-    print_header "Restarting Services"
-    docker-compose restart
-    print_success "Services restarted"
-    sleep 2
+    print_header "Restarting App Services"
+    compose restart backend frontend nginx
+    print_success "App services restarted"
     deploy_status
 }
 
 deploy_logs() {
-    echo -e "\n${BLUE}Choose which logs to view:${NC}"
+    echo -e "\n${BLUE}Choose logs:${NC}"
     echo "1) All services"
-    echo "2) Backend only"
-    echo "3) Frontend only"
-    echo "4) Nginx only"
-    echo "5) Database only"
+    echo "2) Backend"
+    echo "3) Frontend"
+    echo "4) Nginx"
+    echo "5) Database"
     echo ""
-    read -p "Enter choice [1-5]: " log_choice
+    read -r -p "Enter choice [1-5]: " log_choice
 
-    case $log_choice in
-        1)
-            docker-compose logs -f
-            ;;
-        2)
-            docker-compose logs -f backend
-            ;;
-        3)
-            docker-compose logs -f frontend
-            ;;
-        4)
-            docker-compose logs -f nginx
-            ;;
-        5)
-            docker-compose logs -f db
-            ;;
-        *)
-            print_error "Invalid choice"
-            ;;
+    case "$log_choice" in
+        1) compose logs -f ;;
+        2) compose logs -f backend ;;
+        3) compose logs -f frontend ;;
+        4) compose logs -f nginx ;;
+        5) compose logs -f db ;;
+        *) print_error "Invalid choice" ;;
     esac
 }
 
 deploy_status() {
     print_header "Service Status"
-    docker-compose ps
+    compose ps
     echo ""
-    echo "Container health:"
-    docker ps --format "table {{.Names}}\t{{.Status}}" | grep leaflink
+    echo "Leaflink container status:"
+    docker ps --format "table {{.Names}}\t{{.Status}}" | grep leaflink || true
 }
 
 init_database() {
-    print_header "Initializing Database Schema"
+    print_header "Initialize Database Schema"
 
-    # Load environment variables
-    source .env
-
-    print_warning "This will reset the database schema if it already exists"
-    read -p "Continue? (yes/no): " confirm
-
+    print_warning "This applies backend/db_setup.sql to the current database."
+    read -r -p "Continue? (yes/no): " confirm
     if [ "$confirm" != "yes" ]; then
         print_warning "Database initialization cancelled"
-        return
+        return 0
     fi
 
-    # Run the schema setup script
-    docker-compose exec -T db psql -U $DB_USER -d $DB_NAME < backend/db_setup.sql
+    compose up -d db
+    wait_for_database
 
+    compose exec -T db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backend/db_setup.sql
     print_success "Database schema initialized"
 
-    # Verify tables were created
     echo -e "${BLUE}Tables created:${NC}"
-    docker-compose exec db psql -U $DB_USER -d $DB_NAME -c "\dt"
+    compose exec -T db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\\dt"'
 }
 
 backup_database() {
     print_header "Database Backup"
 
-    source .env
+    local backup_file="leaflink_backup_$(date +%Y%m%d_%H%M%S).sql"
+    echo "Backing up database to: $backup_file"
 
-    BACKUP_FILE="leaflink_backup_$(date +%Y%m%d_%H%M%S).sql"
+    compose exec -T db sh -lc 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > "$backup_file"
 
-    echo "Backing up database to: $BACKUP_FILE"
-
-    docker-compose exec -T db pg_dump -U $DB_USER $DB_NAME > "$BACKUP_FILE"
-
-    if [ $? -eq 0 ]; then
-        SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-        print_success "Database backed up ($SIZE): $BACKUP_FILE"
-    else
-        print_error "Database backup failed"
-        exit 1
-    fi
+    local size
+    size=$(du -h "$backup_file" | cut -f1)
+    print_success "Database backup created (${size}): $backup_file"
 }
 
-# Run main function
+start_pgadmin() {
+    print_header "Start pgAdmin"
+    compose --profile tools up -d pgadmin
+    print_success "pgAdmin started on 127.0.0.1:5051"
+}
+
+stop_pgadmin() {
+    print_header "Stop pgAdmin"
+    compose stop pgadmin || true
+    print_success "pgAdmin stopped"
+}
+
 main

@@ -1,66 +1,99 @@
-version: "3.8"
-
 services:
 
   db:
-    container_name: postgresql_db
-    image: postgres
-    restart: always
-    ports:
-      - 5432:5432
+    container_name: leaflink_db
+    image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - leaflink_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - leaflink_network
 
   pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4
+    container_name: leaflink_pgadmin
+    image: dpage/pgadmin4:latest
+    profiles: ["tools"]
+    restart: unless-stopped
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+      - PGADMIN_CONFIG_PROXY_X_FOR_COUNT=1
+      - PGADMIN_CONFIG_PROXY_X_PROTO_COUNT=1
     ports:
-      - 5050:80
+      - "127.0.0.1:5051:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - leaflink_network
+
   nginx:
-    container_name: nginx
+    container_name: leaflink_nginx
     build:
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
       context: ./nginx
-    restart: always
+    restart: unless-stopped
     ports:
-      - 5020:80
+      - "8081:80"
+    depends_on:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - leaflink_network
+
   backend:
-    container_name: backend
-    build: 
-      dockerfile: Dockerfile.dev
+    container_name: leaflink_backend
+    build:
+      dockerfile: Dockerfile
       context: ./backend
+    restart: unless-stopped
     env_file:
       - .env
     environment:
       DATABASE_URL: ${DATABASE_URL}
-    volumes:
-      - ./backend:/app
-    ports:
-      - 8000:8000
     depends_on:
-      - db
-    restart: always
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - leaflink_network
 
   frontend:
-    container_name: frontend
-    build: 
-      dockerfile: Dockerfile.dev
+    container_name: leaflink_frontend
+    build:
+      dockerfile: Dockerfile
       context: ./frontend
-    volumes:
-      - /app/node_modules
-      - ./frontend:/app
-    ports:
-      - 5173:5173
-    # restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - leaflink_network
 
 volumes:
-  postgres_data:
+  leaflink_postgres_data:
+    driver: local
+
+networks:
+  leaflink_network:
+    driver: bridge
