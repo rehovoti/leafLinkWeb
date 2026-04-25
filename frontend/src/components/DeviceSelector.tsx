@@ -53,11 +53,13 @@ export const DeviceSelector = () => {
 
   const [ modalOpen, setModalOpen ] = useState(false)
 
-  const { register, handleSubmit, formState: { errors } } = useForm({ defaultValues<FormFields>: {
-    title: "",
-    mac_address: "",
-    user_ref: "",
-  }})
+  const { register, handleSubmit, formState: { errors } } = useForm<FormFields>({
+    defaultValues: {
+      title: "",
+      mac_address: "",
+      user_ref: "",
+    }
+  })
 
   const [addDevice, { isCLoading, isSuccess, isError }] = useAddDeviceMutation();
   const {data:devices=[], isLoading, isError:isDevErr, error} = useGetDevicesQuery();
